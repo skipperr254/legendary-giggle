@@ -1,18 +1,52 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useStyleMatchImage } from '@/hooks/use-media';
+import { useMediaUrl } from '@/hooks/use-database';
+import type { DesignStyle, StyleMaterial } from '@/lib/database';
 
 interface StyleDetailsProps {
   style: string;
   characteristics: string[];
   designTips: string[];
-  metals: string[];
-  woodFinishes: string[];
+  styleData: DesignStyle;
+  materials: {
+    wood: StyleMaterial[];
+    metal: StyleMaterial[];
+  };
+  materialsLoading: boolean;
   colorPalette: string[];
 }
 
-const StyleDetails: React.FC<StyleDetailsProps> = ({ style, characteristics, designTips, metals, woodFinishes, colorPalette }) => {
-  const { imageUrl, loading } = useStyleMatchImage(style);
+const MaterialItem: React.FC<{ material: StyleMaterial }> = ({ material }) => {
+  const imageUrl = useMediaUrl(material.image);
+  
+  return (
+    <span className="bg-primary text-primary-foreground px-3 py-1 rounded-md text-sm flex items-center gap-2">
+      <div className="w-4 h-4 rounded-sm overflow-hidden flex-shrink-0">
+        <img
+          src={imageUrl}
+          alt={material.material_name}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = '/placeholder.svg';
+          }}
+        />
+      </div>
+      {material.material_name}
+    </span>
+  );
+};
+
+const StyleDetails: React.FC<StyleDetailsProps> = ({ 
+  style, 
+  characteristics, 
+  designTips, 
+  styleData,
+  materials,
+  materialsLoading,
+  colorPalette 
+}) => {
+  const imageUrl = useMediaUrl(styleData.hero_image);
 
   const histories: Record<string, string> = {
     "French Country": "Originating in the French countryside during the 17th-18th centuries, this style emerged from rural farmhouses and provincial homes. It reflects the rustic elegance of French rural life, emphasizing natural materials, soft colors, and romantic details that create warm, inviting spaces.",
@@ -28,21 +62,15 @@ const StyleDetails: React.FC<StyleDetailsProps> = ({ style, characteristics, des
   return (
     <>
       <div className="mb-6 flex justify-center">
-        {loading ? (
-          <div className="w-full max-w-md h-48 bg-gray-200 animate-pulse rounded-lg shadow-md flex items-center justify-center">
-            <span className="text-gray-400">Loading style image...</span>
-          </div>
-        ) : (
-          <img 
-            src={imageUrl} 
-            alt={`${style} Design Style Illustration`} 
-            className="w-full max-w-md h-48 object-cover rounded-lg shadow-md"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = '/placeholder.svg';
-            }}
-          />
-        )}
+        <img 
+          src={imageUrl} 
+          alt={styleData.hero_image?.alt_text || `${style} Design Style Illustration`} 
+          className="w-full max-w-md h-48 object-cover rounded-lg shadow-md"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = '/placeholder.svg';
+          }}
+        />
       </div>
       
       <Card className="mb-6">
@@ -94,24 +122,36 @@ const StyleDetails: React.FC<StyleDetailsProps> = ({ style, characteristics, des
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h4 className="text-lg font-semibold mb-3 text-foreground">Metal Finishes:</h4>
-              <div className="flex flex-wrap gap-2">
-                {metals.map((metal, index) => (
-                  <span key={index} className="bg-primary text-primary-foreground px-3 py-1 rounded-md text-sm">
-                    {metal}
-                  </span>
-                ))}
-              </div>
+              {materialsLoading ? (
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="bg-gray-200 animate-pulse h-8 w-24 rounded-md"></div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {materials.metal.map((material) => (
+                    <MaterialItem key={material.id} material={material} />
+                  ))}
+                </div>
+              )}
             </div>
             
             <div>
               <h4 className="text-lg font-semibold mb-3 text-foreground">Wood Finishes:</h4>
-              <div className="flex flex-wrap gap-2">
-                {woodFinishes.map((wood, index) => (
-                  <span key={index} className="bg-primary text-primary-foreground px-3 py-1 rounded-md text-sm">
-                    {wood}
-                  </span>
-                ))}
-              </div>
+              {materialsLoading ? (
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="bg-gray-200 animate-pulse h-8 w-24 rounded-md"></div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {materials.wood.map((material) => (
+                    <MaterialItem key={material.id} material={material} />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

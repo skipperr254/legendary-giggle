@@ -7,19 +7,20 @@ import StyleVideo from './StyleVideo';
 import PurchaseDialog from './PurchaseDialog';
 import DownloadGenerator from './DownloadGenerator';
 import { useToast } from '@/hooks/use-toast';
-import { styleResults } from '@/data/styleResults';
+import { useStyleMaterials, useMediaUrl } from '@/hooks/use-database';
+import type { DesignStyle } from '@/lib/database';
 
 interface QuizResultProps {
   style: string;
   description: string;
   characteristics: string[];
   designTips: string[];
-  metals: string[];
-  woodFinishes: string[];
+  styleData: DesignStyle;
   colorPalette: string[];
   answers: string[];
   onRestart: () => void;
   firstName?: string;
+  loading?: boolean;
 }
 
 const QuizResult: React.FC<QuizResultProps> = ({
@@ -27,17 +28,20 @@ const QuizResult: React.FC<QuizResultProps> = ({
   description,
   characteristics,
   designTips,
-  metals,
-  woodFinishes,
+  styleData,
   colorPalette,
   answers,
   onRestart,
-  firstName
+  firstName,
+  loading = false
 }) => {
   const [hasPurchased, setHasPurchased] = useState(false);
   const [shouldDownload, setShouldDownload] = useState(false);
   const [downloadAll, setDownloadAll] = useState(false);
   const { toast } = useToast();
+  
+  const { materials, loading: materialsLoading } = useStyleMaterials(styleData.id);
+  const pdfUrl = useMediaUrl(styleData.pdf_guide);
 
   const handlePurchaseComplete = (isAllResults = false) => {
     setHasPurchased(true);
@@ -48,8 +52,20 @@ const QuizResult: React.FC<QuizResultProps> = ({
     setTimeout(() => setShouldDownload(false), 1000);
   };
 
-  const totalStyles = Object.keys(styleResults).length;
-  const hasMultipleResults = totalStyles > 1;
+  if (loading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto space-y-6">
+        <Card className="shadow-lg border border-gray-200 bg-white">
+          <CardContent className="p-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Calculating your results...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -59,9 +75,10 @@ const QuizResult: React.FC<QuizResultProps> = ({
           description={description}
           characteristics={characteristics}
           designTips={designTips}
-          metals={metals}
-          woodFinishes={woodFinishes}
+          metals={materials.metal.map(m => m.material_name)}
+          woodFinishes={materials.wood.map(m => m.material_name)}
           colorPalette={colorPalette}
+          pdfUrl={pdfUrl !== '/placeholder.svg' ? pdfUrl : undefined}
         />
       )}
       
@@ -93,12 +110,13 @@ const QuizResult: React.FC<QuizResultProps> = ({
         style={style} 
         characteristics={characteristics}
         designTips={designTips}
-        metals={metals} 
-        woodFinishes={woodFinishes}
+        styleData={styleData}
+        materials={materials}
+        materialsLoading={materialsLoading}
         colorPalette={colorPalette}
       />
       
-      <StyleVideo style={style} />
+      <StyleVideo styleData={styleData} />
       
       <StylePercentages answers={answers} />
       
@@ -110,13 +128,11 @@ const QuizResult: React.FC<QuizResultProps> = ({
               onPurchaseComplete={() => handlePurchaseComplete(false)}
               allResults={false}
             />
-            {hasMultipleResults && (
-              <PurchaseDialog 
-                style={style} 
-                onPurchaseComplete={() => handlePurchaseComplete(true)}
-                allResults={true}
-              />
-            )}
+            <PurchaseDialog 
+              style={style} 
+              onPurchaseComplete={() => handlePurchaseComplete(true)}
+              allResults={true}
+            />
           </div>
         ) : (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
