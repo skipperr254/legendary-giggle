@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 // Initialize Supabase client
 // Using direct values from project configuration
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   throw new Error(
