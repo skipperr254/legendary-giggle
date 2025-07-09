@@ -1,4 +1,5 @@
 import React from 'react';
+import { getStylePDF } from '@/lib/supabase-storage';
 
 interface DownloadGeneratorProps {
   style: string;
@@ -20,6 +21,28 @@ const DownloadGenerator: React.FC<DownloadGeneratorProps> = ({
   colorPalette
 }) => {
   const generatePDF = () => {
+    // First try to get the actual PDF from Supabase
+    getStylePDF(style).then(pdfUrl => {
+      if (pdfUrl) {
+        // If PDF exists in Supabase, download it directly
+        const element = document.createElement('a');
+        element.href = pdfUrl;
+        element.download = `${style.replace(/\s+/g, '_')}_Style_Guide.pdf`;
+        element.target = '_blank';
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+      } else {
+        // Fallback to generating text file
+        generateTextFile();
+      }
+    }).catch(() => {
+      // If there's an error, fallback to text file
+      generateTextFile();
+    });
+  };
+
+  const generateTextFile = () => {
     const content = `
 # ${style} Style Guide
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useStyleMatchImage } from '@/hooks/use-media';
 
 interface StyleDetailsProps {
   style: string;
@@ -11,6 +12,8 @@ interface StyleDetailsProps {
 }
 
 const StyleDetails: React.FC<StyleDetailsProps> = ({ style, characteristics, designTips, metals, woodFinishes, colorPalette }) => {
+  const { imageUrl, loading } = useStyleMatchImage(style);
+
   const histories: Record<string, string> = {
     "French Country": "Originating in the French countryside during the 17th-18th centuries, this style emerged from rural farmhouses and provincial homes. It reflects the rustic elegance of French rural life, emphasizing natural materials, soft colors, and romantic details that create warm, inviting spaces.",
     "Japandi": "A contemporary fusion of Japanese minimalism and Scandinavian hygge, emerging in the 2010s. This style combines the Japanese philosophy of wabi-sabi (finding beauty in imperfection) with Scandinavian functionality and coziness, creating serene, uncluttered living spaces.",
@@ -25,11 +28,21 @@ const StyleDetails: React.FC<StyleDetailsProps> = ({ style, characteristics, des
   return (
     <>
       <div className="mb-6 flex justify-center">
-        <img 
-          src="/placeholder.svg" 
-          alt="Design Style Illustration" 
-          className="w-full max-w-md h-48 object-cover rounded-lg shadow-md"
-        />
+        {loading ? (
+          <div className="w-full max-w-md h-48 bg-gray-200 animate-pulse rounded-lg shadow-md flex items-center justify-center">
+            <span className="text-gray-400">Loading style image...</span>
+          </div>
+        ) : (
+          <img 
+            src={imageUrl} 
+            alt={`${style} Design Style Illustration`} 
+            className="w-full max-w-md h-48 object-cover rounded-lg shadow-md"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/placeholder.svg';
+            }}
+          />
+        )}
       </div>
       
       <Card className="mb-6">
