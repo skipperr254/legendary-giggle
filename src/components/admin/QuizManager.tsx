@@ -1,18 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Edit, Trash2, HelpCircle, List } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
-import type { QuizQuestion, QuizOption, RoomType, DesignStyle, MediaFile } from '@/lib/database';
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Edit, Trash2, HelpCircle, List } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import type {
+  QuizQuestion,
+  QuizOption,
+  RoomType,
+  DesignStyle,
+  MediaFile,
+} from "@/lib/database";
 
 const QuizManager: React.FC = () => {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -20,14 +45,30 @@ const QuizManager: React.FC = () => {
   const [designStyles, setDesignStyles] = useState<DesignStyle[]>([]);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingQuestion, setEditingQuestion] = useState<QuizQuestion | null>(null);
+  const [editingQuestion, setEditingQuestion] = useState<QuizQuestion | null>(
+    null
+  );
   const [isQuestionDialogOpen, setIsQuestionDialogOpen] = useState(false);
   const [questionFormData, setQuestionFormData] = useState({
-    question_text: '',
-    room_type_id: '',
-    question_type: 'style_preference',
+    question_text: "",
+    room_type_id: "",
+    question_type: "style_preference",
     sort_order: 0,
   });
+  /* For Options */
+  const [selectedQuestion, setSelectedQuestion] = useState<QuizQuestion | null>(
+    null
+  );
+  const [optionFormData, setOptionFormData] = useState({
+    option_letter: "A",
+    style_id: "",
+    image_id: "",
+    option_text: "",
+    sort_order: 0,
+  });
+  const [isOptionDialogOpen, setIsOptionDialogOpen] = useState(false);
+  /* For Options */
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,8 +91,9 @@ const QuizManager: React.FC = () => {
 
   const fetchQuestions = async () => {
     const { data, error } = await supabase
-      .from('quiz_questions')
-      .select(`
+      .from("quiz_questions")
+      .select(
+        `
         *,
         room_type:room_type_id(id, name),
         options:quiz_options(
@@ -62,19 +104,63 @@ const QuizManager: React.FC = () => {
           style:style_id(id, name),
           image:image_id(id, filename)
         )
-      `)
-      .order('sort_order');
+      `
+      )
+      .order("sort_order");
 
     if (error) throw error;
     setQuestions(data || []);
   };
 
+  /* For Options */
+
+  const handleAddOption = (question: QuizQuestion) => {
+    setSelectedQuestion(question);
+    setOptionFormData({
+      option_letter: "A",
+      style_id: "",
+      image_id: "",
+      option_text: "",
+      sort_order: 0,
+    });
+    setIsOptionDialogOpen(true);
+  };
+
+  const handleOptionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedQuestion) return;
+
+    try {
+      const { error } = await supabase.from("quiz_options").insert([
+        {
+          question_id: selectedQuestion.id,
+          ...optionFormData,
+        },
+      ]);
+
+      if (error) throw error;
+
+      toast({ title: "Success", description: "Option added successfully." });
+      setIsOptionDialogOpen(false);
+      await fetchQuestions(); // Refresh question list with options
+    } catch (error) {
+      console.error("Error saving option:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save option.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  /* For Options */
+
   const fetchRoomTypes = async () => {
     const { data, error } = await supabase
-      .from('room_types')
-      .select('*')
-      .eq('is_active', true)
-      .order('sort_order');
+      .from("room_types")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order");
 
     if (error) throw error;
     setRoomTypes(data || []);
@@ -82,10 +168,10 @@ const QuizManager: React.FC = () => {
 
   const fetchDesignStyles = async () => {
     const { data, error } = await supabase
-      .from('design_styles')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('name');
+      .from("design_styles")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name");
 
     if (error) throw error;
     setDesignStyles(data || []);
@@ -93,11 +179,11 @@ const QuizManager: React.FC = () => {
 
   const fetchMediaFiles = async () => {
     const { data, error } = await supabase
-      .from('media_files')
-      .select('id, filename, file_type')
-      .eq('file_type', 'image')
-      .eq('is_active', true)
-      .order('filename');
+      .from("media_files")
+      .select("id, filename, file_type")
+      .eq("file_type", "image")
+      .eq("is_active", true)
+      .order("filename");
 
     if (error) throw error;
     setMediaFiles(data || []);
@@ -105,34 +191,40 @@ const QuizManager: React.FC = () => {
 
   const handleQuestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       if (editingQuestion) {
         const { error } = await supabase
-          .from('quiz_questions')
+          .from("quiz_questions")
           .update(questionFormData)
-          .eq('id', editingQuestion.id);
+          .eq("id", editingQuestion.id);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Question updated successfully" });
+        toast({
+          title: "Success",
+          description: "Question updated successfully",
+        });
       } else {
         const { error } = await supabase
-          .from('quiz_questions')
+          .from("quiz_questions")
           .insert([questionFormData]);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Question created successfully" });
+        toast({
+          title: "Success",
+          description: "Question created successfully",
+        });
       }
 
       setIsQuestionDialogOpen(false);
       resetQuestionForm();
       fetchQuestions();
     } catch (error) {
-      console.error('Error saving question:', error);
+      console.error("Error saving question:", error);
       toast({
         title: "Error",
         description: "Failed to save question",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -149,23 +241,28 @@ const QuizManager: React.FC = () => {
   };
 
   const handleDeleteQuestion = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this question and all its options?')) return;
+    if (
+      !confirm(
+        "Are you sure you want to delete this question and all its options?"
+      )
+    )
+      return;
 
     try {
       const { error } = await supabase
-        .from('quiz_questions')
+        .from("quiz_questions")
         .delete()
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
       toast({ title: "Success", description: "Question deleted successfully" });
       fetchQuestions();
     } catch (error) {
-      console.error('Error deleting question:', error);
+      console.error("Error deleting question:", error);
       toast({
         title: "Error",
         description: "Failed to delete question",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -173,58 +270,76 @@ const QuizManager: React.FC = () => {
   const resetQuestionForm = () => {
     setEditingQuestion(null);
     setQuestionFormData({
-      question_text: '',
-      room_type_id: '',
-      question_type: 'style_preference',
+      question_text: "",
+      room_type_id: "",
+      question_type: "style_preference",
       sort_order: 0,
     });
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading quiz data...</div>;
+    return <div className='text-center py-8'>Loading quiz data...</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <Tabs defaultValue="questions" className="space-y-4">
+    <div className='space-y-6'>
+      <Tabs defaultValue='questions' className='space-y-4'>
         <TabsList>
-          <TabsTrigger value="questions">Questions</TabsTrigger>
-          <TabsTrigger value="options">Options</TabsTrigger>
+          <TabsTrigger value='questions'>Questions</TabsTrigger>
+          <TabsTrigger value='options'>Options</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="questions" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Quiz Questions ({questions.length})</h3>
-            <Dialog open={isQuestionDialogOpen} onOpenChange={setIsQuestionDialogOpen}>
+        <TabsContent value='questions' className='space-y-4'>
+          <div className='flex justify-between items-center'>
+            <h3 className='text-lg font-semibold'>
+              Quiz Questions ({questions.length})
+            </h3>
+            <Dialog
+              open={isQuestionDialogOpen}
+              onOpenChange={setIsQuestionDialogOpen}
+            >
               <DialogTrigger asChild>
                 <Button onClick={resetQuestionForm}>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className='h-4 w-4 mr-2' />
                   Add Question
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className='max-w-2xl'>
                 <DialogHeader>
                   <DialogTitle>
-                    {editingQuestion ? 'Edit Question' : 'Add New Question'}
+                    {editingQuestion ? "Edit Question" : "Add New Question"}
                   </DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleQuestionSubmit} className="space-y-4">
+                <form onSubmit={handleQuestionSubmit} className='space-y-4'>
                   <div>
-                    <Label htmlFor="question_text">Question Text</Label>
+                    <Label htmlFor='question_text'>Question Text</Label>
                     <Textarea
-                      id="question_text"
+                      id='question_text'
                       value={questionFormData.question_text}
-                      onChange={(e) => setQuestionFormData({ ...questionFormData, question_text: e.target.value })}
+                      onChange={(e) =>
+                        setQuestionFormData({
+                          ...questionFormData,
+                          question_text: e.target.value,
+                        })
+                      }
                       required
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className='grid grid-cols-2 gap-4'>
                     <div>
-                      <Label htmlFor="room_type_id">Room Type</Label>
-                      <Select value={questionFormData.room_type_id} onValueChange={(value) => setQuestionFormData({ ...questionFormData, room_type_id: value })}>
+                      <Label htmlFor='room_type_id'>Room Type</Label>
+                      <Select
+                        value={questionFormData.room_type_id}
+                        onValueChange={(value) =>
+                          setQuestionFormData({
+                            ...questionFormData,
+                            room_type_id: value,
+                          })
+                        }
+                      >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select room type" />
+                          <SelectValue placeholder='Select room type' />
                         </SelectTrigger>
                         <SelectContent>
                           {roomTypes.map((room) => (
@@ -236,44 +351,199 @@ const QuizManager: React.FC = () => {
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="question_type">Question Type</Label>
-                      <Select value={questionFormData.question_type} onValueChange={(value) => setQuestionFormData({ ...questionFormData, question_type: value })}>
+                      <Label htmlFor='question_type'>Question Type</Label>
+                      <Select
+                        value={questionFormData.question_type}
+                        onValueChange={(value) =>
+                          setQuestionFormData({
+                            ...questionFormData,
+                            question_type: value,
+                          })
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="style_preference">Style Preference</SelectItem>
-                          <SelectItem value="material_preference">Material Preference</SelectItem>
-                          <SelectItem value="color_preference">Color Preference</SelectItem>
+                          <SelectItem value='style_preference'>
+                            Style Preference
+                          </SelectItem>
+                          <SelectItem value='material_preference'>
+                            Material Preference
+                          </SelectItem>
+                          <SelectItem value='color_preference'>
+                            Color Preference
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="sort_order">Sort Order</Label>
+                    <Label htmlFor='sort_order'>Sort Order</Label>
                     <Input
-                      id="sort_order"
-                      type="number"
+                      id='sort_order'
+                      type='number'
                       value={questionFormData.sort_order}
-                      onChange={(e) => setQuestionFormData({ ...questionFormData, sort_order: parseInt(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        setQuestionFormData({
+                          ...questionFormData,
+                          sort_order: parseInt(e.target.value) || 0,
+                        })
+                      }
                     />
                   </div>
 
-                  <div className="flex justify-end space-x-2">
-                    <Button type="button" variant="outline" onClick={() => setIsQuestionDialogOpen(false)}>
+                  <div className='flex justify-end space-x-2'>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      onClick={() => setIsQuestionDialogOpen(false)}
+                    >
                       Cancel
                     </Button>
-                    <Button type="submit">
-                      {editingQuestion ? 'Update' : 'Create'}
+                    <Button type='submit'>
+                      {editingQuestion ? "Update" : "Create"}
                     </Button>
                   </div>
                 </form>
               </DialogContent>
             </Dialog>
+
+            {/* For Option */}
+            <Dialog
+              open={isOptionDialogOpen}
+              onOpenChange={setIsOptionDialogOpen}
+            >
+              <DialogContent className='max-w-xl'>
+                <DialogHeader>
+                  <DialogTitle>
+                    Add Option for: {selectedQuestion?.question_text}
+                  </DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleOptionSubmit} className='space-y-4'>
+                  <div>
+                    <Label htmlFor='option_letter'>Option Letter</Label>
+                    <Select
+                      value={optionFormData.option_letter}
+                      onValueChange={(value) =>
+                        setOptionFormData({
+                          ...optionFormData,
+                          option_letter: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["A", "B", "C", "D", "E", "F", "G", "H"].map(
+                          (letter) => (
+                            <SelectItem key={letter} value={letter}>
+                              {letter}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor='option_text'>Option Text</Label>
+                    <Textarea
+                      id='option_text'
+                      value={optionFormData.option_text}
+                      onChange={(e) =>
+                        setOptionFormData({
+                          ...optionFormData,
+                          option_text: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div>
+                      <Label htmlFor='style_id'>Style</Label>
+                      <Select
+                        value={optionFormData.style_id}
+                        onValueChange={(value) =>
+                          setOptionFormData({
+                            ...optionFormData,
+                            style_id: value,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder='Select style' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {designStyles.map((style) => (
+                            <SelectItem key={style.id} value={style.id}>
+                              {style.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor='image_id'>Image</Label>
+                      <Select
+                        value={optionFormData.image_id}
+                        onValueChange={(value) =>
+                          setOptionFormData({
+                            ...optionFormData,
+                            image_id: value,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder='Select image' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {mediaFiles.map((file) => (
+                            <SelectItem key={file.id} value={file.id}>
+                              {file.filename}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor='sort_order'>Sort Order</Label>
+                    <Input
+                      id='sort_order'
+                      type='number'
+                      value={optionFormData.sort_order}
+                      onChange={(e) =>
+                        setOptionFormData({
+                          ...optionFormData,
+                          sort_order: parseInt(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className='flex justify-end space-x-2'>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      onClick={() => setIsOptionDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type='submit'>Add Option</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            {/* For Option */}
           </div>
 
-          <div className="border rounded-lg">
+          <div className='border rounded-lg'>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -289,38 +559,53 @@ const QuizManager: React.FC = () => {
                 {questions.map((question) => (
                   <TableRow key={question.id}>
                     <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <HelpCircle className="h-4 w-4" />
-                        <div className="max-w-xs">
-                          <div className="font-medium truncate">{question.question_text}</div>
+                      <div className='flex items-center space-x-2'>
+                        <HelpCircle className='h-4 w-4' />
+                        <div className='max-w-xs'>
+                          <div className='font-medium truncate'>
+                            {question.question_text}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{question.room_type.name}</Badge>
+                      <Badge variant='outline'>{question.room_type.name}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{question.question_type}</Badge>
+                      <Badge variant='secondary'>
+                        {question.question_type}
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{question.options?.length || 0} options</Badge>
+                      <Badge variant='outline'>
+                        {question.options?.length || 0} options
+                      </Badge>
                     </TableCell>
                     <TableCell>{question.sort_order}</TableCell>
                     <TableCell>
-                      <div className="flex space-x-2">
+                      <div className='flex space-x-2'>
                         <Button
-                          size="sm"
-                          variant="outline"
+                          size='sm'
+                          variant='outline'
                           onClick={() => handleEditQuestion(question)}
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className='h-4 w-4' />
                         </Button>
+                        {/* For Options */}
                         <Button
-                          size="sm"
-                          variant="outline"
+                          size='sm'
+                          variant='outline'
+                          onClick={() => handleAddOption(question)}
+                        >
+                          <List className='h-4 w-4' />
+                        </Button>
+                        {/* For Options */}
+                        <Button
+                          size='sm'
+                          variant='outline'
                           onClick={() => handleDeleteQuestion(question.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className='h-4 w-4' />
                         </Button>
                       </div>
                     </TableCell>
@@ -331,11 +616,13 @@ const QuizManager: React.FC = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="options" className="space-y-4">
-          <div className="text-center py-8 text-gray-500">
-            <List className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <TabsContent value='options' className='space-y-4'>
+          <div className='text-center py-8 text-gray-500'>
+            <List className='h-12 w-12 mx-auto mb-4 opacity-50' />
             <p>Quiz options management coming soon...</p>
-            <p className="text-sm">You can manage quiz options by editing individual questions above.</p>
+            <p className='text-sm'>
+              You can manage quiz options by editing individual questions above.
+            </p>
           </div>
         </TabsContent>
       </Tabs>
